@@ -144,6 +144,21 @@ class Bomb:
         screen.blit(self.img, self.rct)
 
 
+class Explosion:
+    def __init__(self, bomb: Bomb, life: int):
+        self.imgs = [pg.image.load("ex03/fig/explosion.gif"),
+                    pg.transform.flip(pg.image.load("ex03/fig/explosion.gif"), True, True)]
+        self.rct = self.imgs[0].get_rect()
+        self.rct.center = bomb.rct.center
+        self.life = life
+
+    def update(self, screen: pg.Surface):
+        if self.life > 0:
+            index = self.life // 10 % len(self.imgs)
+            screen.blit(self.imgs[index], self.rct)
+            self.life -= 1
+
+
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -151,6 +166,9 @@ def main():
     bird = Bird(3, (900, 400))
     bombs = [Bomb() for _ in range(NUM_OF_BOMBS)]
     beam = None
+    explosions = []
+    game_over = False
+    game_over_counnt = 0
 
     clock = pg.time.Clock()
     tmr = 0
@@ -166,11 +184,11 @@ def main():
 
         for bomb in bombs:
             if bird.rct.colliderect(bomb.rct):
-                # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
+                # 爆発インスタンスを生成してリストに追加
+                explosions.append(Explosion(bomb, 100))
                 bird.change_img(8, screen)
                 pg.display.update()
-                time.sleep(1)
-                return
+                game_over = True
         for i, bomb in enumerate(bombs):
             if beam is not None:
                 if beam.rct.colliderect(bomb.rct):  # ビームと爆弾の衝突判定
@@ -182,6 +200,17 @@ def main():
                     time.sleep(1)
                     bird.change_img(3, screen)
         bombs = [bomb for bomb in bombs if bomb is not None]
+
+        explosions = [exp for exp in explosions if exp.life > 0]
+
+        # すべての有効なExplosionインスタンスを更新
+        for exp in explosions:
+            exp.update(screen)
+
+        if game_over:  # ゲームオーバーの場合は、ループを抜ける
+            game_over_count += 1  # ゲームオーバーになったらカウントを増やす
+            if game_over_count > 50:  # 50フレーム後にゲームを終了
+                break
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
