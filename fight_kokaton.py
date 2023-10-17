@@ -42,10 +42,10 @@ class Bird:
         """
         self.img = pg.transform.flip(  # 左右反転
             pg.transform.rotozoom(  # 2倍に拡大
-                pg.image.load(f"ex03/fig/{num}.png"),
-                0,
-                2.0),
-            True,
+                pg.image.load(f"ex03/fig/{num}.png"), 
+                0, 
+                2.0), 
+            True, 
             False
         )
         self.rct = self.img.get_rect()
@@ -77,6 +77,27 @@ class Bird:
         screen.blit(self.img, self.rct)
 
 
+class Beam:
+    def __init__(self, bird: Bird):
+        """
+        ビーム画像Surfaceを生成する
+        引数 bird：こうかとんインスタンス（Birdクラスのインスタンス）
+        """
+        self.img = pg.image.load(f"ex03/fig/beam.png")
+        self.rct = self.img.get_rect()
+        self.rct.left = bird.rct.right  # こうかとんの右横座標
+        self.rct.centery = bird.rct.centery  # こうかとんの中心縦座標
+        self.vx, self.vy = +5, 0
+
+    def update(self, screen: pg.Surface):
+        """
+        ビームを速度vxにしたがって移動させる
+        引数 screen：画面Surface
+        """
+        self.rct.move_ip(self.vx, self.vy)
+        screen.blit(self.img, self.rct)
+
+
 class Bomb:
     """
     爆弾に関するクラス
@@ -93,39 +114,17 @@ class Bomb:
         self.rct = self.img.get_rect()
         self.rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
         self.vx, self.vy = +5, +5
-        self.visible = True
 
     def update(self, screen: pg.Surface):
         """
         爆弾を速度ベクトルself.vx, self.vyに基づき移動させる
         引数 screen：画面Surface
         """
-        if not self.visible:
-            return
         yoko, tate = check_bound(self.rct)
         if not yoko:
             self.vx *= -1
         if not tate:
             self.vy *= -1
-        self.rct.move_ip(self.vx, self.vy)
-        screen.blit(self.img, self.rct)
-
-    def remove(self):
-        self.visible = False  # 爆弾を非表示にする
-
-
-class Beam:
-    """
-    ビームに関するクラス
-    """
-    def __init__(self, bird_rct: pg.Rect):
-        self.img = pg.image.load("ex03/fig/beam.png")
-        self.rct = self.img.get_rect()
-        self.rct.midleft = bird_rct.midright
-        self.vx = 5
-        self.vy = 0
-
-    def update(self, screen: pg.Surface):
         self.rct.move_ip(self.vx, self.vy)
         screen.blit(self.img, self.rct)
 
@@ -136,7 +135,7 @@ def main():
     bg_img = pg.image.load("ex03/fig/pg_bg.jpg")
     bird = Bird(3, (900, 400))
     bomb = Bomb((255, 0, 0), 10)
-    beams = []
+    beam = None
 
     clock = pg.time.Clock()
     tmr = 0
@@ -144,27 +143,33 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_SPACE:
-                    beams.append(Beam(bird.rct))
+            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                # キーが押されたら，かつ，キーの種類がスペースキーだったら
+                beam = Beam(bird)
+
+
         screen.blit(bg_img, [0, 0])
 
-        for beam in beams[:]:
-            beam.update(screen)
-            if beam.rct.colliderect(bomb.rct):
-                beams.remove(beam)
-                bomb.remove()
-
-        if bird.rct.colliderect(bomb.rct):
-            # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
-            bird.change_img(8, screen)
-            pg.display.update()
-            time.sleep(1)
-            return
+        if bomb is not None:
+            if bird.rct.colliderect(bomb.rct):
+                # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
+                bird.change_img(8, screen)
+                pg.display.update()
+                time.sleep(1)
+                return
+        if beam is not None:
+            if bomb is not None:
+                if beam.rct.colliderect(bomb.rct):  # ビームと爆弾の衝突判定
+                    # 撃墜＝Noneにする
+                    beam = None
+                    bomb = None
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
-        bomb.update(screen)
+        if bomb is not None:
+            bomb.update(screen)
+        if beam is not None:
+            beam.update(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
