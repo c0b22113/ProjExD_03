@@ -165,7 +165,7 @@ def main():
     bg_img = pg.image.load("ex03/fig/pg_bg.jpg")
     bird = Bird(3, (900, 400))
     bombs = [Bomb() for _ in range(NUM_OF_BOMBS)]
-    beam = None
+    beams = []
     score = Score()
 
     clock = pg.time.Clock()
@@ -175,8 +175,7 @@ def main():
             if event.type == pg.QUIT:
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                # キーが押されたら，かつ，キーの種類がスペースキーだったら
-                beam = Beam(bird)
+                beams.append(Beam(bird))
 
         screen.blit(bg_img, [0, 0])
 
@@ -187,24 +186,41 @@ def main():
                 pg.display.update()
                 time.sleep(1)
                 return
-        for i, bomb in enumerate(bombs):
-            if beam is not None:
-                if beam.rct.colliderect(bomb.rct):  # ビームと爆弾の衝突判定
-                    score.score += 1
-                    # 撃墜＝Noneにする
-                    beam = None
-                    bombs[i] = None
-                    bird.change_img(6, screen)
-                    pg.display.update()
-                    time.sleep(1)
-                    bird.change_img(3, screen)
-        bombs = [bomb for bomb in bombs if bomb is not None]
+
+                # ビームと爆弾の当たり判定およびビームの更新
+        new_beams = []
+        for i, current_beam in enumerate(beams):
+            if current_beam:
+                hit = False
+                for j, current_bomb in enumerate(bombs):
+                    if current_bomb and current_beam.rct.colliderect(current_bomb.rct):
+                        score.score += 1
+                        beams[i] = None  # ビームを削除
+                        bombs[j] = None  # 爆弾を削除
+                        bird.change_img(6, screen)
+                        pg.display.update()
+                        time.sleep(1)
+                        bird.change_img(3, screen)
+                        hit = True
+                        break  # 当たったらそのビームに対する判定を終了
+
+                if not hit:  # ビームが存在し、かつ当たっていない場合
+                    yoko, tate = check_bound(current_beam.rct)
+                    if yoko:
+                        new_beams.append(current_beam)
+                        current_beam.update(screen)  # ビームを更新
+
+        beams = [beam for beam in beams if beam is not None]  # None を取り除く
+        beams = new_beams  # リストを更新
+
+        bombs = [bomb for bomb in bombs if bomb is not None]  # None を取り除く
+
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
         for bomb in bombs:
             bomb.update(screen)
-        if beam is not None:
+        for beam in beams:
             beam.update(screen)
         score.update(screen)
         pg.display.update()
