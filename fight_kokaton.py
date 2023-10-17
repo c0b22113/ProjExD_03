@@ -42,10 +42,10 @@ class Bird:
         """
         self.img = pg.transform.flip(  # 左右反転
             pg.transform.rotozoom(  # 2倍に拡大
-                pg.image.load(f"ex03/fig/{num}.png"), 
-                0, 
-                2.0), 
-            True, 
+                pg.image.load(f"ex03/fig/{num}.png"),
+                0,
+                2.0),
+            True,
             False
         )
         self.rct = self.img.get_rect()
@@ -57,7 +57,7 @@ class Bird:
         引数1 num：こうかとん画像ファイル名の番号
         引数2 screen：画面Surface
         """
-        self.img = pg.transform.rotozoom(pg.image.load(f"ex03/fig/{num}.png"), 0, 2.0)
+        self.img = pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"ex03/fig/{num}.png"), 0, 2.0), True, False)
         screen.blit(self.img, self.rct)
 
     def update(self, key_lst: list[bool], screen: pg.Surface):
@@ -163,6 +163,10 @@ def main():
                     # 撃墜＝Noneにする
                     beam = None
                     bomb = None
+                    bird.change_img(6, screen)
+                    pg.display.update()
+                    time.sleep(1)
+                    bird.change_img(3, screen)
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
